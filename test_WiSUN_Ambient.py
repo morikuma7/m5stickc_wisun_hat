@@ -58,10 +58,12 @@ def time_count ():
     global Am_err
     
     while True:
-        if Am_err == 0 : # Ambient通信不具合発生時は時計の文字が赤くなる
-            fc = lcd.WHITE
-        else :
-            fc = lcd.RED
+        fc = lcd.WHITE
+        if (AM_ID_1 is not None) and (AM_WKEY_1 is not None) # Ambient通信するとき
+            if Am_err == 0 : # Ambient通信不具合発生時は時計の文字が赤くなる
+                fc = lcd.WHITE
+            else :
+                fc = lcd.RED
 
         if Disp_mode == 1 : # 表示回転処理
             lcd.rect(67, 0, 80, 160, lcd.BLACK, lcd.BLACK)
