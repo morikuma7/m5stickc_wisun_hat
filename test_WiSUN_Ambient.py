@@ -59,11 +59,9 @@ env0 = unit.get(unit.ENV, unit.PORTA)
 def time_count ():
     global Disp_mode
     global Am_err
-    global env0
 
     while True:
         fc = lcd.WHITE
-        disp_string = 'T {:5.2f} H {:5.2f} P {:5.2f} '.format(env0.temperature, env0.humidity, env0.pressure)
         if (AM_ID_1 is not None) and (AM_WKEY_1 is not None): # Ambient通信するとき
             if Am_err == 0 : # Ambient通信不具合発生時は時計の文字が赤くなる
                 fc = lcd.WHITE
@@ -73,12 +71,10 @@ def time_count ():
         if Disp_mode == 1 : # 表示回転処理
             lcd.rect(67, 0, 80, 160, lcd.BLACK, lcd.BLACK)
             lcd.font(lcd.FONT_DefaultSmall, rotate = 90)
-            lcd.print(disp_string, 64, 10, fc)
             lcd.print('{}-{:02d}-{:02d} {:02d}:{:02d}:{:02d}'.format(*time.localtime()[:6]), 78, 40, fc)
         else :
             lcd.rect(0 , 0, 13, 160, lcd.BLACK, lcd.BLACK)
             lcd.font(lcd.FONT_DefaultSmall, rotate = 270)
-            lcd.print(disp_string, 14, 150, fc)
             lcd.print('{}-{:02d}-{:02d} {:02d}:{:02d}:{:02d}'.format(*time.localtime()[:6]), 2, 125, fc)
 
         utime.sleep(1)
@@ -133,6 +129,9 @@ def draw_w():
     global AMPERE_LIMIT
     global AMPERE_RED
 
+    global env0
+    disp_string = 'T {:5.2f} H {:5.2f} P {:5.2f} '.format(env0.temperature, env0.humidity, env0.pressure)
+
     if data_mute or (u.instant_power[0] == 0) : # タイムアウトで表示ミュートされてるか、初期値のままなら電力値非表示（黒文字化）
         fc = lcd.BLACK
     else :
@@ -151,12 +150,17 @@ def draw_w():
         lcd.print('W', 35, 120, fc)
         lcd.font(lcd.FONT_DejaVu24, rotate = 90) # 瞬時電力値の表示
         lcd.print(str(u.instant_power[0]), 40, 135 - ((len(str(u.instant_power[0])))* 24), fc)
+        lcd.font(lcd.FONT_DefaultSmall, rotate = 90)
+        lcd.print(disp_string, 64, 10, fc)
+
     else :
         lcd.rect(15 , 0, 80, 160, lcd.BLACK, lcd.BLACK)
         lcd.font(lcd.FONT_DejaVu18, rotate = 270) # 単位(W)の表示
         lcd.print('W', 45, 40, fc)
         lcd.font(lcd.FONT_DejaVu24, rotate = 270) # 瞬時電力値の表示
         lcd.print(str(u.instant_power[0]), 40, 25 + ((len(str(u.instant_power[0])))* 24), fc)
+        lcd.font(lcd.FONT_DefaultSmall, rotate = 270)
+        lcd.print(disp_string, 14, 150, fc)
 
 
 # wisun_set_m.txtの存在/中身チェック関数
