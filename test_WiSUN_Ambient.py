@@ -9,6 +9,8 @@ import wifiCfg
 import ntptime
 import wisun_udp
 
+import unit
+
 
 # 固定値
 GET_COEFFICIENT         = b'\x10\x81\x00\x01\x05\xFF\x01\x02\x88\x01\x62\x01\xD3\x00'           #D3     *積算電力量係数の要求
@@ -51,15 +53,18 @@ class AXPCompat(object):
 
 axp = AXPCompat()
 
+env0 = unit.get(unit.ENV, unit.PORTA)
 
 # 時計表示スレッド関数
 def time_count ():
     global Disp_mode
     global Am_err
-    
+    global env0
+
     while True:
         fc = lcd.WHITE
-        if (AM_ID_1 is not None) and (AM_WKEY_1 is not None) # Ambient通信するとき
+        disp_string = 'T {:5.2f} H {:5.2f} P {:5.2f} '.format(env0.temperature, env0.humidity, env0.pressure)
+        if (AM_ID_1 is not None) and (AM_WKEY_1 is not None): # Ambient通信するとき
             if Am_err == 0 : # Ambient通信不具合発生時は時計の文字が赤くなる
                 fc = lcd.WHITE
             else :
@@ -68,12 +73,14 @@ def time_count ():
         if Disp_mode == 1 : # 表示回転処理
             lcd.rect(67, 0, 80, 160, lcd.BLACK, lcd.BLACK)
             lcd.font(lcd.FONT_DefaultSmall, rotate = 90)
+            lcd.print(disp_string, 64, 10, fc)
             lcd.print('{}-{:02d}-{:02d} {:02d}:{:02d}:{:02d}'.format(*time.localtime()[:6]), 78, 40, fc)
         else :
             lcd.rect(0 , 0, 13, 160, lcd.BLACK, lcd.BLACK)
             lcd.font(lcd.FONT_DefaultSmall, rotate = 270)
+            lcd.print(disp_string, 14, 150, fc)
             lcd.print('{}-{:02d}-{:02d} {:02d}:{:02d}:{:02d}'.format(*time.localtime()[:6]), 2, 125, fc)
-		
+
         utime.sleep(1)
 
 
@@ -100,7 +107,7 @@ def buttonB_wasPressed():
         Disp_mode = 0
     else :
         Disp_mode = 1
-    
+
     draw_lcd()
 
 
@@ -114,7 +121,7 @@ def draw_lcd():
         lcd.line(66, 0, 66, 160, lcd.LIGHTGREY)
     else :
         lcd.line(14, 0, 14, 160, lcd.LIGHTGREY)
-    
+
     draw_w()
 
 
@@ -137,7 +144,7 @@ def draw_w():
             fc = lcd.WHITE
             if lcd_mute == True :
                 axp.setLDO2Vol(0)   # バックライト輝度調整（中くらい）
-	
+
     if Disp_mode == 1 : # 表示回転処理
         lcd.rect(0, 0, 65, 160, lcd.BLACK, lcd.BLACK)
         lcd.font(lcd.FONT_DejaVu18, rotate = 90) # 単位(W)の表示
@@ -150,7 +157,7 @@ def draw_w():
         lcd.print('W', 45, 40, fc)
         lcd.font(lcd.FONT_DejaVu24, rotate = 270) # 瞬時電力値の表示
         lcd.print(str(u.instant_power[0]), 40, 25 + ((len(str(u.instant_power[0])))* 24), fc)
-	
+
 
 # wisun_set_m.txtの存在/中身チェック関数
 def wisun_set_filechk():
@@ -211,13 +218,13 @@ def wisun_set_filechk():
                     if int(filetxt[1]) == 0 or int(filetxt[1]) == 1 :
                         ESP_NOW_F = int(filetxt[1])
                         print('- ESP_NOW: ' + str(ESP_NOW_F))
-                        
+
         if len(BRID) == 32 and len(BRPSWD) == 12: # BルートIDとパスワードの桁数チェック（NGならプログラム停止）
             scanfile_flg = True
         else :
             print('>> [wisun_set_m.txt] Illegal!!')
             scanfile_flg = False
-            
+
     else :
         print('>> no [wisun_set_m.txt] !')
     return scanfile_flg
@@ -412,7 +419,7 @@ gc.collect()
 # Wi-SUNチャンネルスキャン（「Wi-SUN_SCAN.txt」の存在しない or 中身が異常値だった場合）
 if not wisun_scan_filechk() :
     #<Channel Scan>
-    scanOK = False   
+    scanOK = False
     print('>> Activescan start!')
     while not scanOK :
         bp35a1.write("SKSCAN 2 FFFFFFFF " + str(SCAN_COUNT) + "\r\n")
@@ -429,31 +436,31 @@ if not wisun_scan_filechk() :
                         print('-')
                         scanEnd = True
                     elif ure.match("Channel:" , line.strip()) :
-                        pickuptext = ure.compile(':') 
+                        pickuptext = ure.compile(':')
                         pickt = pickuptext.split(line.strip())
                         channel = str(pickt[1].strip(), 'utf-8')
                         print(" Channel= " + str(channel))
                     elif ure.match("Pan ID:" , line.strip()) :
-                        pickuptext = ure.compile(':') 
+                        pickuptext = ure.compile(':')
                         pickt = pickuptext.split(line.strip())
                         panid = str(pickt[1].strip(), 'utf-8')
                         print(" Pan_ID= " + str(panid))
                     elif ure.match("Addr:" , line.strip()) :
-                        pickuptext = ure.compile(':') 
+                        pickuptext = ure.compile(':')
                         pickt = pickuptext.split(line.strip())
                         macadr = str(pickt[1].strip(), 'utf-8')
                         print(" MAC_Addr= " + str(macadr))
                     elif ure.match("LQI:" , line.strip()) :
-                        pickuptext = ure.compile(':') 
+                        pickuptext = ure.compile(':')
                         pickt = pickuptext.split(line.strip())
                         lqi = str(pickt[1].strip(), 'utf-8')
                         print(" LQI= " + str(lqi))
                     print(line.strip())
             utime.sleep(0.5)
             gc.collect()
-        
+
         SCAN_COUNT+=1
-        
+
         if SCAN_COUNT > 10 :
             raise ValueError('Scan retry count over! Please Reboot!')
         elif len(channel) == 2 and len(panid) == 4 and len(macadr) == 16 and len(lqi) == 2 :
@@ -469,7 +476,7 @@ lcd.print('***** ***', 0, 0, lcd.WHITE)
 
 
 # PANA接続処理
-while True :    
+while True :
     #<Channel set>
     bp35a1.write("SKSREG S2 " + channel + "\r\n")
     utime.sleep(0.5)
@@ -481,7 +488,7 @@ while True :
         if line is not None :
             if ure.match('OK' , line.strip()) :
                 break
-    
+
     #<Pan ID set>
     bp35a1.write("SKSREG S3 " + panid + "\r\n")
     utime.sleep(0.5)
@@ -492,8 +499,8 @@ while True :
             print('*')
         if line is not None :
             if ure.match('OK' , line.strip()) :
-                break    
-    
+                break
+
     #<MACアドレスをIPV6アドレスに変換>
     bp35a1.write("SKLL64 " + macadr + "\r\n")
     utime.sleep(0.5)
@@ -507,7 +514,7 @@ while True :
                 ipv6Addr = str(line.strip(), 'utf-8')
                 print('IPv6 Addr = ' + str(ipv6Addr))
                 break
-    
+
     gc.collect()
     utime.sleep(1)
 
@@ -520,7 +527,7 @@ while True :
         if ure.match("OK" , line) :
             print('>> BA35A1 Echo back OFF set OK')
             break
-    
+
     #<PANA接続要求>
     print('PANA authentication start!!')
     bp35a1.write("SKJOIN " + ipv6Addr + "\r\n")
