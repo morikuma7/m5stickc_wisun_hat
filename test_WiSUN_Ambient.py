@@ -704,6 +704,7 @@ while True:
         if (utime.time() - u.instant_power[1]) >= TIMEOUT : # スマートメーターから瞬時電力計測値の応答が一定時間無い場合は電力値表示のみオフ
             data_mute = True
             draw_w()
+            machine.reset()
 
     utime.sleep(0.1)
     gc.collect()
